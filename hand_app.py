@@ -1,7 +1,10 @@
+import base64
 import streamlit as st
 import cv2
 import mediapipe as mp
 import numpy as np
+from PIL import Image
+from io import BytesIO
 
 st.title("Hand Tracking")
 
@@ -13,6 +16,7 @@ landmark_drawing_spec = mpDraw.DrawingSpec(color=(255, 102, 0), thickness=1, cir
 connection_drawing_spec = mpDraw.DrawingSpec(color=(0, 255, 0), thickness=2)  # Verde
 
 def process_image(image):
+    image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
     image = cv2.flip(image, 1)
     imageRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     results = hands.process(imageRGB)
@@ -36,20 +40,42 @@ def process_image(image):
 
     return image
 
-st.set_option('deprecation.showfileUploaderEncoding', False)
-stframe = st.empty()
+st.markdown("""
+    <style>
+        video {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-cap = cv2.VideoCapture(1)
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        st.error("Errore nella cattura del video.")
-        break
+st.markdown("""
+    <script>
+        async function startCamera() {
+            const video = document.getElementById('webcam-video');
+            const constraints = {
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: "user"
+                }
+            };
+            video.srcObject = await navigator.mediaDevices.getUserMedia(constraints);
+            await video.play();
+        }
+        startCamera();
+    </script>
+    <video id="webcam-video" autoplay playsinline></video>
+    """, unsafe_allow_html=True)
 
-    frame = process_image(frame)
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+img_data = st.text_input("Incolla qui i dati dell'immagine in base64:")
 
-    # Aggiungi un contenitore per il frame del video
-    container = st.container()
-    with container:
-        stframe.image(frame, channels='RGB', use_column_width=True)
+if img_data:
+    header, data = img_data.split(',')
+    decoded_img = base64.b64decode(data)
+    img = Image.open(BytesIO(decoded_img))
+    
+    processed_img = process_image(img)
+    processed_img = cv2.cvtColor(processed_img, cv2.COLOR_BGR2RGB)
+    st.image(processed_img, caption='Processed Image', use_column_width=True)
+
