@@ -39,7 +39,7 @@ def process_image(image):
 st.set_option('deprecation.showfileUploaderEncoding', False)
 stframe = st.empty()
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 while True:
     ret, frame = cap.read()
     if not ret:
